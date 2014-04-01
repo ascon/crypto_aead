@@ -8,26 +8,6 @@ typedef long long i64;
 
 //#define PRINTSTATE
 //#define PRINTWORDS
-#define LITTLE_ENDIAN
-//#define BIG_ENDIAN
-
-#define ROTR(x,N) (((x)>>(N))|((x)<<(64-(N))))
-
-#ifdef BIG_ENDIAN
-#define EXT_BYTE(x,n) ((u8)((u64)(x)>>(8*(n))))
-#define INS_BYTE(x,n) ((u64)(x)<<(8*(n)))
-#define U64BIG(x) (x)
-#endif
-
-#ifdef LITTLE_ENDIAN
-#define EXT_BYTE(x,n) ((u8)((u64)(x)>>(8*(7-(n)))))
-#define INS_BYTE(x,n) ((u64)(x)<<(8*(7-(n))))
-#define U64BIG(x) \
-    ((ROTR(x, 8) & (0xFF000000FF000000ULL)) | \
-     (ROTR(x,24) & (0x00FF000000FF0000ULL)) | \
-     (ROTR(x,40) & (0x0000FF000000FF00ULL)) | \
-     (ROTR(x,56) & (0x000000FF000000FFULL)))
-#endif
 
 void printstate(char* text, u8* S) {
 #ifdef PRINTSTATE
@@ -43,27 +23,43 @@ void printwords(char* text, u64 x0, u64 x1, u64 x2, u64 x3, u64 x4) {
 #ifdef PRINTWORDS
   int i;
   printf("%s\n", text);
-  printf("  x[0]=%016llx\n", i, x[0]);
-  printf("  x[1]=%016llx\n", i, x[1]);
-  printf("  x[2]=%016llx\n", i, x[2]);
-  printf("  x[3]=%016llx\n", i, x[3]);
-  printf("  x[4]=%016llx\n", i, x[4]);
+  printf("  x0=%016llx\n", x0);
+  printf("  x1=%016llx\n", x1);
+  printf("  x2=%016llx\n", x2);
+  printf("  x3=%016llx\n", x3);
+  printf("  x4=%016llx\n", x4);
 #endif
+}
+
+#define ROTR(x,n) (((x)>>(n))|((x)<<(64-(n))))
+
+void L64(u64* x, u8* S) {
+  int i;
+  *x = 0;
+  for (i = 0; i < 8; ++i)
+    *x |= ((u64) S[i]) << (56 - i * 8);
+}
+
+void S64(u8* S, u64 x) {
+  int i;
+  for (i = 0; i < 8; ++i)
+    S[i] = (u8) (x >> (56 - i * 8));
 }
 
 void permutation(u8* S, int rounds) {
   int i;
-  u64 x0 = U64BIG(((u64*)S)[0]);
-  u64 x1 = U64BIG(((u64*)S)[1]);
-  u64 x2 = U64BIG(((u64*)S)[2]);
-  u64 x3 = U64BIG(((u64*)S)[3]);
-  u64 x4 = U64BIG(((u64*)S)[4]);
+  u64 x0, x1, x2, x3, x4;
   u64 t0, t1, t2, t3, t4;
-  printwords("  permutation input:", x0, x1, x2, x3, x4);
+  L64(&x0, S + 0);
+  L64(&x1, S + 8);
+  L64(&x2, S + 16);
+  L64(&x3, S + 24);
+  L64(&x4, S + 32);
+  printwords(" permutation input:", x0, x1, x2, x3, x4);
   for (i = 0; i < rounds; ++i) {
     // addition of round constant
     x2 ^= ((0xfull - i) << 4) | i;
-    printwords("  addition of round constant:", x0, x1, x2, x3, x4);
+    printwords(" addition of round constant:", x0, x1, x2, x3, x4);
     // substitution layer
     x0 ^= x4;    x4 ^= x3;    x2 ^= x1;
     t0  = x0;    t1  = x1;    t2  = x2;    t3  = x3;    t4  = x4;
@@ -71,20 +67,20 @@ void permutation(u8* S, int rounds) {
     t0 &= x1;    t1 &= x2;    t2 &= x3;    t3 &= x4;    t4 &= x0;
     x0 ^= t1;    x1 ^= t2;    x2 ^= t3;    x3 ^= t4;    x4 ^= t0;
     x1 ^= x0;    x0 ^= x4;    x3 ^= x2;    x2 =~ x2;
-    printwords("  substitution layer:", x0, x1, x2, x3, x4);
+    printwords(" substitution layer:", x0, x1, x2, x3, x4);
     // linear diffusion layer
     x0 ^= ROTR(x0, 19) ^ ROTR(x0, 28);
     x1 ^= ROTR(x1, 61) ^ ROTR(x1, 39);
     x2 ^= ROTR(x2,  1) ^ ROTR(x2,  6);
     x3 ^= ROTR(x3, 10) ^ ROTR(x3, 17);
     x4 ^= ROTR(x4,  7) ^ ROTR(x4, 41);
-    printwords("  linear diffusion layer:", x0, x1, x2, x3, x4);
+    printwords(" linear diffusion layer:", x0, x1, x2, x3, x4);
   }
-  ((u64*)S)[0] = U64BIG(x0);
-  ((u64*)S)[1] = U64BIG(x1);
-  ((u64*)S)[2] = U64BIG(x2);
-  ((u64*)S)[3] = U64BIG(x3);
-  ((u64*)S)[4] = U64BIG(x4);
+  S64(S + 0, x0);
+  S64(S + 8, x1);
+  S64(S + 16, x2);
+  S64(S + 24, x3);
+  S64(S + 32, x4);
 }
 
 int crypto_aead_encrypt(
