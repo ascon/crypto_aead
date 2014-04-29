@@ -293,9 +293,6 @@ int crypto_aead_decrypt(
   x4 ^= M64(K1, K2);
 
   // return plaintext or -1 if verification failed
-  ((u32*)c)[0] = U32BIG((u32)x3);
-  ((u32*)c)[1] = U32BIG((u32)(x4 >> 32));
-  ((u32*)c)[2] = U32BIG((u32)x4);
   if (((u32*)c)[0] != U32BIG((u32)x3) ||
       ((u32*)c)[1] != U32BIG((u32)(x4 >> 32)) ||
       ((u32*)c)[2] != U32BIG((u32)x4)) {
