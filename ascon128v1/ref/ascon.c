@@ -185,6 +185,10 @@ int crypto_aead_decrypt(
     const unsigned char *npub,
     const unsigned char *k) {
 
+  *mlen = 0;
+  if (clen < CRYPTO_KEYBYTES)
+    return -1;
+
   int klen = CRYPTO_KEYBYTES;
   //int nlen = CRYPTO_NPUBBYTES;
   int size = 320 / 8;
@@ -258,12 +262,12 @@ int crypto_aead_decrypt(
     S[rate + klen + i] ^= k[i];
   printstate("finalization:", S);
 
-  // return plaintext or -1 if verification failed
+  // return -1 if verification fails
   for (i = 0; i < klen; ++i)
-    if (c[clen - klen + i] != S[rate + klen + i]) {
-      *mlen = 0;
+    if (c[clen - klen + i] != S[rate + klen + i])
       return -1;
-    }
+
+  // return plaintext
   *mlen = clen - klen;
   for (i = 0; i < *mlen; ++i)
     m[i] = M[i];

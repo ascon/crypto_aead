@@ -213,6 +213,10 @@ int crypto_aead_decrypt(
     const unsigned char *npub,
     const unsigned char *k) {
 
+  *mlen = 0;
+  if (clen < CRYPTO_KEYBYTES)
+    return -1;
+
   u32 K0 = U32BIG(((u32*)k)[0]);
   u32 K1 = U32BIG(((u32*)k)[1]);
   u32 K2 = U32BIG(((u32*)k)[2]);
@@ -292,14 +296,13 @@ int crypto_aead_decrypt(
   x3 ^= M64( 0, K0);
   x4 ^= M64(K1, K2);
 
-  // return plaintext or -1 if verification failed
+  // return -1 if verification fails
   if (((u32*)c)[0] != U32BIG((u32)x3) ||
       ((u32*)c)[1] != U32BIG((u32)(x4 >> 32)) ||
-      ((u32*)c)[2] != U32BIG((u32)x4)) {
-    *mlen = 0;
+      ((u32*)c)[2] != U32BIG((u32)x4))
     return -1;
-  }
 
+  // return plaintext
   *mlen = clen - CRYPTO_KEYBYTES;
   return 0;
 }
