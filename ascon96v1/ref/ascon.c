@@ -33,14 +33,14 @@ void printwords(char* text, u64 x0, u64 x1, u64 x2, u64 x3, u64 x4) {
 
 #define ROTR(x,n) (((x)>>(n))|((x)<<(64-(n))))
 
-void L64(u64* x, u8* S) {
+void load64(u64* x, u8* S) {
   int i;
   *x = 0;
   for (i = 0; i < 8; ++i)
     *x |= ((u64) S[i]) << (56 - i * 8);
 }
 
-void S64(u8* S, u64 x) {
+void store64(u8* S, u64 x) {
   int i;
   for (i = 0; i < 8; ++i)
     S[i] = (u8) (x >> (56 - i * 8));
@@ -50,11 +50,11 @@ void permutation(u8* S, int rounds) {
   int i;
   u64 x0, x1, x2, x3, x4;
   u64 t0, t1, t2, t3, t4;
-  L64(&x0, S + 0);
-  L64(&x1, S + 8);
-  L64(&x2, S + 16);
-  L64(&x3, S + 24);
-  L64(&x4, S + 32);
+  load64(&x0, S + 0);
+  load64(&x1, S + 8);
+  load64(&x2, S + 16);
+  load64(&x3, S + 24);
+  load64(&x4, S + 32);
   printwords(" permutation input:", x0, x1, x2, x3, x4);
   for (i = 0; i < rounds; ++i) {
     // addition of round constant
@@ -76,11 +76,11 @@ void permutation(u8* S, int rounds) {
     x4 ^= ROTR(x4,  7) ^ ROTR(x4, 41);
     printwords(" linear diffusion layer:", x0, x1, x2, x3, x4);
   }
-  S64(S + 0, x0);
-  S64(S + 8, x1);
-  S64(S + 16, x2);
-  S64(S + 24, x3);
-  S64(S + 32, x4);
+  store64(S + 0, x0);
+  store64(S + 8, x1);
+  store64(S + 16, x2);
+  store64(S + 24, x3);
+  store64(S + 32, x4);
 }
 
 int crypto_aead_encrypt(
